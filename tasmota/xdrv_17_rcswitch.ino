@@ -97,53 +97,9 @@ void RfInit(void) {
  * Commands
 \*********************************************************************************************/
 
-void CmndRfProtocol(void) {
-  if (!PinUsed(GPIO_RFRECV)) { return; }
-
-//  AddLog_P(LOG_LEVEL_INFO, PSTR("RFR:CmndRfRxProtocol:: index:%d usridx:%d data_len:%d data:\"%s\""),XdrvMailbox.index, XdrvMailbox.usridx, XdrvMailbox.data_len,XdrvMailbox.data);
-
-  uint64_t thisdat;
-  if (1 == XdrvMailbox.usridx) {
-    if (XdrvMailbox.payload >= 0) {
-      thisdat = (1ULL << (XdrvMailbox.index -1));
-      if (XdrvMailbox.payload &1) {
-        Settings.rf_protocol_mask |= thisdat;
-      } else {
-        Settings.rf_protocol_mask &= ~thisdat;
-      }
-    }
-    else if (XdrvMailbox.data_len > 0) {
-      return;  // Not a number
-    }
-  } else {
-    if (XdrvMailbox.data_len > 0) {
-      if ('A' == toupper(XdrvMailbox.data[0])) {
-        Settings.rf_protocol_mask = (1ULL << mySwitch.getNumProtos()) -1;
-      } else {
-        thisdat = strtoull(XdrvMailbox.data, nullptr, 0);
-        if ((thisdat > 0) || ('0' == XdrvMailbox.data[0])) {
-          Settings.rf_protocol_mask = thisdat;
-        } else {
-          return;  // Not a number
-        }
-      }
-    }
-  }
-  mySwitch.setReceiveProtocolMask(Settings.rf_protocol_mask);
-//  AddLog_P(LOG_LEVEL_INFO, PSTR("RFR: CmndRfProtocol:: Start responce"));
-  Response_P(PSTR("{\"" D_CMND_RFPROTOCOL "\":\""));
-  bool gotone = false;
-  thisdat = 1;
-  for (uint32_t i = 0; i < mySwitch.getNumProtos(); i++) {
-    if (Settings.rf_protocol_mask & thisdat) {
-      ResponseAppend_P(PSTR("%s%d"), (gotone) ? "," : "", i+1);
-      gotone = true;
-    }
-    thisdat <<=1;
-  }
-  if (!gotone) { ResponseAppend_P(PSTR(D_JSON_NONE_ENABLED)); }
-  ResponseAppend_P(PSTR("\""));
-  ResponseJsonEnd();
+void CmndRfProtocol(void)
+{
+    return;
 }
 
 void CmndRfSend(void)

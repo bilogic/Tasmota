@@ -1,193 +1,187 @@
-/*
-  RCSwitch - Arduino libary for remote control outlet switches
-  Copyright (c) 2011 Suat Özgür.  All right reserved.
+/* ======================= .h =============================== */
 
-  Contributors:
-  - Andre Koehler / info(at)tomate-online(dot)de
-  - Gordeev Andrey Vladimirovich / gordeev(at)openpyro(dot)com
-  - Skineffect / http://forum.ardumote.com/viewtopic.php?f=2&t=46
-  - Dominik Fischer / dom_fischer(at)web(dot)de
-  - Frank Oltmanns / <first name>.<last name>(at)gmail(dot)com
-  - Max Horn / max(at)quendi(dot)de
-  - Robert ter Vehn / <first name>.<last name>(at)gmail(dot)com
-
-  Project home: https://github.com/sui77/rc-switch/
-
-  This library is free software; you can redistribute it and/or
-  modify it under the terms of the GNU Lesser General Public
-  License as published by the Free Software Foundation; either
-  version 2.1 of the License, or (at your option) any later version.
-
-  This library is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  Lesser General Public License for more details.
-
-  You should have received a copy of the GNU Lesser General Public
-  License along with this library; if not, write to the Free Software
-  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-*/
 #ifndef _RCSwitch_h
 #define _RCSwitch_h
 
-#if defined(ARDUINO) && ARDUINO >= 100
-    #include "Arduino.h"
-#elif defined(ENERGIA) // LaunchPad, FraunchPad and StellarPad specific
-    #include "Energia.h"
-#elif defined(RPI) // Raspberry Pi
-    #define RaspberryPi
+// #define RC_DEBUG
 
-    // Include libraries for RPi:
-    #include <string.h> /* memcpy */
-    #include <stdlib.h> /* abs */
-    #include <wiringPi.h>
-#elif defined(SPARK)
-    #include "application.h"
+#if defined(ARDUINO) && ARDUINO >= 100
+#include "Arduino.h"
+#elif defined(RPI) // Raspberry Pi
+#define RaspberryPi
+
+// Include libraries for RPi:
+#include <string.h> /* memcpy */
+#include <stdlib.h> /* abs */
+#include <wiringPi.h>
 #else
-    #include "WProgram.h"
+#include "WProgram.h"
 #endif
 
+#define ARDUINO_H
 #include <stdint.h>
+#include <stddef.h>
+#include <stdlib.h>
 
+// to make it compile (by Frido)
 
-// At least for the ATTiny X4/X5, receiving has to be disabled due to
-// missing libm depencies (udivmodhi4)
-#if defined( __AVR_ATtinyX5__ ) or defined ( __AVR_ATtinyX4__ )
+#define boolean bool
+#pragma GCC diagnostic ignored "-Wwrite-strings"
+#pragma GCC diagnostic ignored "-Wconversion-null"
+#pragma GCC diagnostic ignored "-Wpointer-arith"
+#pragma GCC diagnostic ignored "-Wsign-compare"
+#pragma GCC diagnostic ignored "-Wreturn-type"
+
+// Maximum number of supported RX pins.
+// Setting this to 0 will #define RCSwitchDisableReceiving
+#define RCSWITCH_MAX_RX_PINS 2
+
+// Number of maximum High/Low changes per packet.
+// We can handle up to (unsigned long) => 32 bit * 2 H/L changes per bit + 2 for sync
+#define RCSWITCH_MAX_CHANGES 67
+
+#define PROTOCOL3_SYNC_FACTOR 71
+#define PROTOCOL3_0_HIGH_CYCLES 4
+#define PROTOCOL3_0_LOW_CYCLES 11
+#define PROTOCOL3_1_HIGH_CYCLES 9
+#define PROTOCOL3_1_LOW_CYCLES 6
+
+// #define RCSwitchDisableReceiving if there are no supported RX pins.
+#ifdef RCSWITCH_MAX_RX_PINS
+#if (RCSWITCH_MAX_RX_PINS == 0)
+// Two checks needed: preprocessor replaces undefined symbols with 0.
 #define RCSwitchDisableReceiving
 #endif
+#endif
 
-// Number of maximum high/Low changes per packet.
-// We can handle up to (unsigned long) => 32 bit * 2 H/L changes per bit + 2 for sync
-// Для keeloq нужно увеличить RCSWITCH_MAX_CHANGES до 23+1+66*2+1=157
-#define RCSWITCH_MAX_CHANGES 67        // default 67
+class RCSwitch
+{
 
-class RCSwitch {
-
-  public:
+public:
     RCSwitch();
 
     void switchOn(int nGroupNumber, int nSwitchNumber);
     void switchOff(int nGroupNumber, int nSwitchNumber);
-    void switchOn(const char* sGroup, int nSwitchNumber);
-    void switchOff(const char* sGroup, int nSwitchNumber);
+    void switchOn(char *sGroup, int nSwitchNumber);
+    void switchOff(char *sGroup, int nSwitchNumber);
     void switchOn(char sFamily, int nGroup, int nDevice);
     void switchOff(char sFamily, int nGroup, int nDevice);
-    void switchOn(const char* sGroup, const char* sDevice);
-    void switchOff(const char* sGroup, const char* sDevice);
+    void switchOn(char *sGroup, char *sDevice);
+    void switchOff(char *sGroup, char *sDevice);
     void switchOn(char sGroup, int nDevice);
     void switchOff(char sGroup, int nDevice);
 
-    void sendTriState(const char* sCodeWord);
-    void send(unsigned long long code, unsigned int length);
-    void send(const char* sCodeWord);
+    void sendTriState(char *Code);
+    void send(unsigned long Code, unsigned int length);
+    void send(char *Code);
 
-    #if not defined( RCSwitchDisableReceiving )
+#if not defined(RCSwitchDisableReceiving)
     void enableReceive(int interrupt);
-    void enableReceive();
+    // Enabling "all" is only useful if InterruptData.isDisabled exists.
+    //void enableReceive();
+    void disableReceive(int interrupt);
     void disableReceive();
     bool available();
     void resetAvailable();
 
-    unsigned long long getReceivedValue();
-    unsigned int getReceivedBitlength();
-    unsigned int getReceivedDelay();
-    unsigned int getReceivedProtocol();
-    unsigned int* getReceivedRawdata();
-    uint8_t getNumProtos();
-    #endif
+    int getReceivedPin();
+    unsigned long getReceivedValue(int interrupt);
+    unsigned int getReceivedBitlength(int interrupt);
+    unsigned int getReceivedDelay(int interrupt);
+    unsigned int getReceivedProtocol(int interrupt);
+    unsigned int *getReceivedRawdata(int interrupt);
+#endif
 
     void enableTransmit(int nTransmitterPin);
     void disableTransmit();
     void setPulseLength(int nPulseLength);
     void setRepeatTransmit(int nRepeatTransmit);
-    #if not defined( RCSwitchDisableReceiving )
+#if not defined(RCSwitchDisableReceiving)
     void setReceiveTolerance(int nPercent);
-    void setReceiveProtocolMask(unsigned long long mask);
-    #endif
-
-    /**
-     * Description of a single pule, which consists of a high signal
-     * whose duration is "high" times the base pulse length, followed
-     * by a low signal lasting "low" times the base pulse length.
-     * Thus, the pulse overall lasts (high+low)*pulseLength
-     */
-    struct HighLow {
-        uint8_t high;
-        uint8_t low;
-    };
-
-    /**
-     * A "protocol" describes how zero and one bits are encoded into high/low
-     * pulses.
-     */
-    struct Protocol {
-        /** base pulse length in microseconds, e.g. 350 */
-        uint16_t pulseLength;
-        uint8_t PreambleFactor;
-        HighLow Preamble;
-        uint8_t HeaderFactor;
-        HighLow Header;
-
-        HighLow zero;
-        HighLow one;
-
-        /**
-         * If true, interchange high and low logic levels in all transmissions.
-         *
-         * By default, RCSwitch assumes that any signals it sends or receives
-         * can be broken down into pulses which start with a high signal level,
-         * followed by a a low signal level. This is e.g. the case for the
-         * popular PT 2260 encoder chip, and thus many switches out there.
-         *
-         * But some devices do it the other way around, and start with a low
-         * signal level, followed by a high signal level, e.g. the HT6P20B. To
-         * accommodate this, one can set invertedSignal to true, which causes
-         * RCSwitch to change how it interprets any HighLow struct FOO: It will
-         * then assume transmissions start with a low signal lasting
-         * FOO.high*pulseLength microseconds, followed by a high signal lasting
-         * FOO.low*pulseLength microseconds.
-         */
-        bool invertedSignal;
-        uint16_t Guard;
-    };
-
-    void setProtocol(Protocol protocol);
+    void setReceiveRepeat(int nRepeatReceive);
+#endif
     void setProtocol(int nProtocol);
     void setProtocol(int nProtocol, int nPulseLength);
 
-  private:
-    char* getCodeWordA(const char* sGroup, const char* sDevice, bool bStatus);
-    char* getCodeWordB(int nGroupNumber, int nSwitchNumber, bool bStatus);
-    char* getCodeWordC(char sFamily, int nGroup, int nDevice, bool bStatus);
-    char* getCodeWordD(char group, int nDevice, bool bStatus);
-    void transmit(HighLow pulses);
+    char *dec2binWzerofill(unsigned long dec, unsigned int length);
+    char *dec2binWcharfill(unsigned long dec, unsigned int length, char fill);
 
-    #if not defined( RCSwitchDisableReceiving )
+private:
+    char *getCodeWordB(int nGroupNumber, int nSwitchNumber, boolean bStatus);
+    char *getCodeWordA(char *sGroup, int nSwitchNumber, boolean bStatus);
+    char *getCodeWordA(char *sGroup, char *sDevice, boolean bStatus);
+    char *getCodeWordC(char sFamily, int nGroup, int nDevice, boolean bStatus);
+    char *getCodeWordD(char group, int nDevice, boolean bStatus);
+    void sendT0();
+    void sendT1();
+    void sendTF();
+    void send0();
+    void send1();
+    void sendSync();
+    void transmit(int nHighPulses, int nLowPulses);
+
+#if not defined(RCSwitchDisableReceiving)
     static void handleInterrupt();
-    static bool receiveProtocol(const int p, unsigned int changeCount);
-    int nReceiverInterrupt;
-    #endif
+    static bool receiveProtocol1(int interrupt_i, unsigned int changeCount);
+    static bool receiveProtocol2(int interrupt_i, unsigned int changeCount);
+    static bool receiveProtocol3(int interrupt_i, unsigned int changeCount);
+    static int getInterruptIndex(int interrupt);
+
+    // TODO: Possibly switch to using an explicit `bool is_disabled` (as opposed to -1)
+    // TODO: Possibly implement an interrupt-specific "isAvailable"? Such that the user
+    //		 can loop through all interrupts they are interested in.
+    struct InterruptData
+    {
+        int interrupt;
+        //bool isDisabled;
+        //bool isAvailable;
+
+        unsigned long nReceivedValue;
+        unsigned int nReceivedBitlength;
+        unsigned int nReceivedDelay;
+        unsigned int nReceivedProtocol;
+
+        unsigned long lastTime;
+        unsigned int duration;
+        unsigned int changeCount, repeatCount;
+        bool isPinPrevHigh;
+
+        InterruptData()
+        {
+            interrupt = -1;
+            //isDisabled = true;
+            //isAvailable = false;
+
+            nReceivedValue = NULL;
+            nReceivedBitlength = 0;
+            nReceivedDelay = 0;
+            nReceivedProtocol = 0;
+
+            lastTime = 0;
+            duration = 0;
+            changeCount = 0;
+            repeatCount = 0;
+            isPinPrevHigh = false;
+        }
+    };
+
+    static InterruptData receiverInterrupts[RCSWITCH_MAX_RX_PINS];
+    static int nInterruptSourcePin;
+#endif
+
     int nTransmitterPin;
+    int nPulseLength;
     int nRepeatTransmit;
-    Protocol protocol;
-
-    #if not defined( RCSwitchDisableReceiving )
+    char nProtocol;
+#if not defined(RCSwitchDisableReceiving)
     static int nReceiveTolerance;
-    volatile static unsigned long long nReceivedValue;
-    volatile static unsigned long long nReceiveProtocolMask;
-    volatile static unsigned int nReceivedBitlength;
-    volatile static unsigned int nReceivedDelay;
-    volatile static unsigned int nReceivedProtocol;
-    const static unsigned int nSeparationLimit;
+    static int nReceiveRepeat;
+#endif
+
     /*
-     * timings[0] contains sync timing, followed by a number of bits
-     */
-    static unsigned int timings[RCSWITCH_MAX_CHANGES];
-    // буфер длительностей последних четырех пакетов, [0] - последний
-    static unsigned int buftimings[4];
-    #endif
-
-
+	 * timings[0] contains sync timing, followed by a number of bits
+	 */
+    static unsigned int timings[RCSWITCH_MAX_RX_PINS][RCSWITCH_MAX_CHANGES];
 };
 
 #endif
