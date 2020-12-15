@@ -86,10 +86,6 @@ void RfInit(void) {
   if (PinUsed(GPIO_RFRECV)) {
     pinMode( Pin(GPIO_RFRECV), INPUT);
     mySwitch.enableReceive(Pin(GPIO_RFRECV));
-    if (!Settings.rf_protocol_mask) {
-      Settings.rf_protocol_mask = (1ULL << mySwitch.getNumProtos()) -1;
-    }
-    mySwitch.setReceiveProtocolMask(Settings.rf_protocol_mask);
   }
 }
 
