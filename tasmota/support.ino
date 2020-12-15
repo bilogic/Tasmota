@@ -1257,15 +1257,15 @@ void DumpConvertTable(void) {
 */
 #endif  // ESP8266
 
-uint32_t ICACHE_RAM_ATTR Pin(uint32_t gpio, uint32_t index = 0);
-uint32_t ICACHE_RAM_ATTR Pin(uint32_t gpio, uint32_t index) {
+uint32_t ICACHE_RAM_ATTR Pin(uint32_t gpio, uint32_t index = 0, uint32_t scan_from = 0);
+uint32_t ICACHE_RAM_ATTR Pin(uint32_t gpio, uint32_t index, uint32_t scan_from) {
   uint16_t real_gpio = gpio << 5;
   uint16_t mask = 0xFFE0;
   if (index < GPIO_ANY) {
     real_gpio += index;
     mask = 0xFFFF;
   }
-  for (uint32_t i = 0; i < ARRAY_SIZE(TasmotaGlobal.gpio_pin); i++) {
+  for (uint32_t i = 0 + scan_from; i < ARRAY_SIZE(TasmotaGlobal.gpio_pin); i++) {
     if ((TasmotaGlobal.gpio_pin[i] & mask) == real_gpio) {
       return i;              // Pin number configured for gpio
     }

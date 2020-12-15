@@ -51,10 +51,12 @@ uint32_t rf_lasttime = 0;
 void RfReceiveCheck(void) {
   if (mySwitch.available()) {
 
-    unsigned long data = mySwitch.getReceivedValue();
-    unsigned int bits = mySwitch.getReceivedBitlength();
-    int protocol = mySwitch.getReceivedProtocol();
-    int delay = mySwitch.getReceivedDelay();
+    uint32_t receivedPin = mySwitch.getReceivedPin();
+
+    unsigned long data = mySwitch.getReceivedValue(receivedPin);
+    unsigned int bits = mySwitch.getReceivedBitlength(receivedPin);
+    int protocol = mySwitch.getReceivedProtocol(receivedPin);
+    int delay = mySwitch.getReceivedDelay(receivedPin);
 
     AddLog_P(LOG_LEVEL_DEBUG, PSTR("RFR: Data 0x%lX (%u), Bits %d, Protocol %d, Delay %d"), data, data, bits, protocol, delay);
 
@@ -84,8 +86,22 @@ void RfInit(void) {
     mySwitch.enableTransmit(Pin(GPIO_RFSEND));
   }
   if (PinUsed(GPIO_RFRECV)) {
+    mySwitch.setReceiveTolerance(60);
     pinMode( Pin(GPIO_RFRECV), INPUT);
     mySwitch.enableReceive(Pin(GPIO_RFRECV));
+    uint32_t p = -1;
+    while (1)
+    {
+      p = Pin(GPIO_RFRECV, 0, p + 1);
+      if (p == 99)
+        break;
+      else
+      {
+        AddLog_P(LOG_LEVEL_INFO, PSTR("Added RFRecv on pin %d"), p);
+        pinMode(p, INPUT);
+        mySwitch.enableReceive(p);
+      }
+    }
   }
 }
 
